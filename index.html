@@ -41,9 +41,32 @@ function saveState(){history.push(charms.map(c=>({...c})));if(history.length>30)
 function point(t,kind='main'){const x=Math.cos(t),y=Math.sin(t),nx=x/rx,ny=y/ry,len=Math.hypot(nx,ny)||1,offset=kind==='stopper'?0:.075;return{x:cx+rx*x+(nx/len)*offset,y:cy+ry*y+(ny/len)*offset}}
 function render(){stage.querySelectorAll('.charm-holder').forEach(n=>n.remove());charms.forEach(c=>{const holder=document.createElement('div');holder.className='charm-holder'+(products[c.product][2]==='stopper'?' stopper':'')+(c.id===selected?' selected':'');holder.dataset.id=String(c.id);const im=document.createElement('img');im.className='charm';im.src=products[c.product][1];im.alt=products[c.product][0];const cord=document.createElement('span');cord.className='cord-through';holder.appendChild(cord);holder.appendChild(im);const p=point(c.t,products[c.product][2]);holder.style.left=(p.x*100)+'%';holder.style.top=(p.y*100)+'%';holder.addEventListener('pointerdown',e=>startDrag(e,c.id));holder.addEventListener('click',e=>{e.stopPropagation();selected=c.id;render()});stage.appendChild(holder)});document.getElementById('count').textContent='· '+charms.length+' charm'}
 function addCharm(i){saveState();const t=Math.PI/2+(charms.length-((charms.length+1)/2))*0.62;const id=nextId++;charms.push({id,product:i,t});selected=id;render()}
-let drag=null;function startDrag(e,id){e.preventDefault();e.stopPropagation();saveState();selected=id;drag=id;try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}}
-stage.addEventListener('pointermove',e=>{if(drag===null)return;const r=stage.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height,t=Math.atan2((y-cy)/ry,(x-cx)/rx),c=charms.find(c=>c.id===drag);if(c){c.t=t;const p=point(t,products[c.product][2]),el=[...stage.querySelectorAll('.charm-holder')].find(n=>n.dataset.id===String(drag));if(el){el.style.left=(p.x*100)+'%';el.style.top=(p.y*100)+'%'}}});
-function endDrag(){if(drag!==null){drag=null;render()}}stage.addEventListener('pointerup',endDrag);stage.addEventListener('pointercancel',endDrag);
+let drag=null,dragPointer=null;
+function startDrag(e,id){
+ e.preventDefault();e.stopPropagation();saveState();selected=id;drag=id;dragPointer=e.pointerId;
+ try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}
+}
+function moveDraggedCharm(e){
+ if(drag===null || (dragPointer!==null && e.pointerId!==dragPointer))return;
+ const r=stage.getBoundingClientRect();
+ const x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
+ // atan2 giữ đủ 360 độ: charm đi được cả nửa trên, nửa dưới và hai bên vòng.
+ const t=Math.atan2((y-cy)/ry,(x-cx)/rx);
+ const c=charms.find(c=>c.id===drag);
+ if(!c)return;
+ c.t=t;
+ const p=point(t,products[c.product][2]);
+ const el=[...stage.querySelectorAll('.charm-holder')].find(n=>n.dataset.id===String(drag));
+ if(el){el.style.left=(p.x*100)+'%';el.style.top=(p.y*100)+'%'}
+}
+stage.addEventListener('pointermove',moveDraggedCharm);
+function endDrag(e){
+ if(drag!==null && (dragPointer===null || !e || e.pointerId===dragPointer)){
+  drag=null;dragPointer=null;render();
+ }
+}
+stage.addEventListener('pointerup',endDrag);
+stage.addEventListener('pointercancel',endDrag);
 document.getElementById('undo').onclick=()=>{if(history.length){charms=history.pop();selected=charms.length?charms[charms.length-1].id:null;render()}};
 document.getElementById('remove').onclick=()=>{if(selected!==null){saveState();charms=charms.filter(c=>c.id!==selected);selected=null;render()}};
 document.getElementById('clear').onclick=()=>{if(charms.length){saveState();charms=[];selected=null;render()}};
