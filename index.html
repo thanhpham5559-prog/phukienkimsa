@@ -26,21 +26,29 @@ const stage=document.getElementById('stage'),inventory=document.getElementById('
 products.forEach((p,i)=>{let d=document.createElement('div');d.className='item';d.innerHTML=`<img src="${p[1]}" alt="${p[0]}"><b>${p[0]}</b><button>＋ Thêm vào vòng</button>`;d.querySelector('button').onclick=()=>addCharm(i);inventory.appendChild(d)});
 function saveState(){history.push(charms.map(c=>({...c})));if(history.length>30)history.shift()}
 function point(t){
- // Charm body hangs inward from the cord: the cord crosses behind its upper/back side.
+ // The bracelet cord runs behind the upper/back part of the charm body.
  const ax=Math.cos(t), ay=Math.sin(t);
  const len=Math.hypot(ax,ay)||1;
  const cordX=cx+rx*ax, cordY=cy+ry*ay;
- const inset=.060;
+ const inset=.075;
  return{x:cordX-(ax/len)*inset,y:cordY-(ay/len)*inset};
 }
-function render(){stage.querySelectorAll('.charm').forEach(n=>n.remove());charms.forEach(c=>{let im=document.createElement('img');im.className='charm'+(c.id===selected?' selected':'');im.src=products[c.product][1];im.alt=products[c.product][0];im.dataset.id=String(c.id);let p=point(c.t);im.style.left=(p.x*100)+'%';im.style.top=(p.y*100)+'%';im.addEventListener('pointerdown',e=>startDrag(e,c.id));im.addEventListener('click',e=>{e.stopPropagation();selected=c.id;render()});stage.appendChild(im)});document.getElementById('count').textContent='· '+charms.length+' charm'}
+function charmAngle(t){
+ // Keep the charm's threading channel aligned radially with the bracelet cord.
+ return t-Math.PI/2;
+}
+function render(){stage.querySelectorAll('.charm').forEach(n=>n.remove());charms.forEach(c=>{let im=document.createElement('img');im.className='charm'+(c.id===selected?' selected':'');im.src=products[c.product][1];im.alt=products[c.product][0];im.dataset.id=String(c.id);let p=point(c.t);im.style.left=(p.x*100)+'%';im.style.top=(p.y*100)+'%';im.style.transform=`translate(-50%,-50%) rotate(${charmAngle(c.t)}rad)`;im.addEventListener('pointerdown',e=>startDrag(e,c.id));im.addEventListener('click',e=>{e.stopPropagation();selected=c.id;render()});stage.appendChild(im)});document.getElementById('count').textContent='· '+charms.length+' charm'}
 function addCharm(i){saveState();let id=Date.now()+Math.random();let t= Math.PI/2 + (charms.length%7-3)*.18;charms.push({id,product:i,t});selected=id;render()}
 let drag=null;function startDrag(e,id){e.preventDefault();e.stopPropagation();if(drag===null)saveState();selected=id;drag=id;try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}}
-stage.addEventListener('pointermove',e=>{if(drag===null)return;let r=stage.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;let t=Math.atan2((y-cy)/ry,(x-cx)/rx);let c=charms.find(c=>c.id===drag);if(c){c.t=t;let p=point(t),el=[...stage.querySelectorAll('.charm')].find(x=>x.dataset.id===String(drag));if(el){el.style.left=(p.x*100)+'%';el.style.top=(p.y*100)+'%'}}});
+stage.addEventListener('pointermove',e=>{if(drag===null)return;let r=stage.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;let t=Math.atan2((y-cy)/ry,(x-cx)/rx);let c=charms.find(c=>c.id===drag);if(c){c.t=t;let p=point(t),el=[...stage.querySelectorAll('.charm')].find(x=>x.dataset.id===String(drag));if(el){el.style.left=(p.x*100)+'%';el.style.top=(p.y*100)+'%';el.style.transform=`translate(-50%,-50%) rotate(${charmAngle(t)}rad)`}}});
 stage.addEventListener('pointerup',()=>{if(drag!==null){drag=null;render()}});stage.addEventListener('pointercancel',()=>{drag=null;render()});
 document.getElementById('undo').onclick=()=>{if(history.length){charms=history.pop();selected=charms.length?charms[charms.length-1].id:null;render()}};
 document.getElementById('remove').onclick=()=>{if(selected!==null){saveState();charms=charms.filter(c=>c.id!==selected);selected=null;render()}};
 document.getElementById('clear').onclick=()=>{if(charms.length){saveState();charms=[];selected=null;render()}};
-document.getElementById('save').onclick=()=>{let w=stage.clientWidth,h=stage.clientHeight,canvas=document.createElement('canvas');canvas.width=1200;canvas.height=1200;let ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,1200,1200);let ring=new Image();ring.src='vong-day-hong.png';ring.onload=()=>{ctx.drawImage(ring,0,0,1200,1200);let n=0;charms.forEach(c=>{let im=new Image();im.src=products[c.product][1];im.onload=()=>{let p=point(c.t),size=270;ctx.drawImage(im,p.x*1200-size/2,p.y*1200-size/2,size,size);if(++n===charms.length)download()}});if(!charms.length)download()};function download(){let a=document.createElement('a');a.download='phoi-vong-kim-sa.png';a.href=canvas.toDataURL('image/png');a.click()}};
+document.getElementById('save').onclick=()=>{
+ const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=1200;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,1200,1200);
+ const ring=new Image();ring.src='vong-day-hong.png';ring.onload=()=>{ctx.drawImage(ring,0,0,1200,1200);let pending=charms.length;if(!pending){download();return;}charms.forEach(c=>{const im=new Image();im.src=products[c.product][1];im.onload=()=>{const p=point(c.t),size=384;ctx.save();ctx.translate(p.x*1200,p.y*1200);ctx.rotate(charmAngle(c.t));ctx.drawImage(im,-size/2,-size/2,size,size);ctx.restore();if(--pending===0)download();};im.onerror=()=>{if(--pending===0)download();};});};
+ function download(){const a=document.createElement('a');a.download='phoi-vong-kim-sa.png';a.href=canvas.toDataURL('image/png');a.click();}
+};
 render();
 </script></body></html>
