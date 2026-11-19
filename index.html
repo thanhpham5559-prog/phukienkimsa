@@ -13,7 +13,7 @@
 <section class="card"><h2>1. Mẫu vòng</h2><div class="sub">Vòng dây hồng</div></section>
 <section class="card"><h2>2. Khu vực phối charm <span class="count" id="count">· 0 charm</span></h2>
 <div class="stage-wrap"><div class="stage" id="stage"><img class="bracelet" src="vong-day-hong.png" alt="Vòng dây hồng"></div></div>
-<p class="hint">Chọn charm bên dưới để thêm vào vòng. Charm được mô phỏng xỏ ngang qua lưng; dây chạy phía sau phần trên thân charm, mặt charm hướng vào lòng vòng. Giữ và kéo charm quanh đường dây 360°. Chạm vào charm để chọn.</p>
+<p class="hint">Chọn charm bên dưới để thêm vào vòng. Tâm lỗ xỏ hai bên charm được đặt trên đường dây; phần thân charm che đoạn dây ở giữa, hai đầu dây lộ ra tại hai lỗ. Giữ và kéo charm quanh vòng 360°. Chạm vào charm để chọn.</p>
 <div class="tools"><button class="btn" id="undo">↶ Hoàn tác</button><button class="btn" id="remove">Xóa charm chọn</button><button class="btn" id="clear">Xóa tất cả</button><button class="btn primary" id="save">Lưu ảnh phối</button></div>
 </section>
 <section class="card"><h2>3. Kho charm của shop</h2><div class="inventory" id="inventory"></div></section>
@@ -26,16 +26,14 @@ const stage=document.getElementById('stage'),inventory=document.getElementById('
 products.forEach((p,i)=>{let d=document.createElement('div');d.className='item';d.innerHTML=`<img src="${p[1]}" alt="${p[0]}"><b>${p[0]}</b><button>＋ Thêm vào vòng</button>`;d.querySelector('button').onclick=()=>addCharm(i);inventory.appendChild(d)});
 function saveState(){history.push(charms.map(c=>({...c})));if(history.length>30)history.shift()}
 function point(t){
- // The bracelet cord runs behind the upper/back part of the charm body.
- const ax=Math.cos(t), ay=Math.sin(t);
- const len=Math.hypot(ax,ay)||1;
- const cordX=cx+rx*ax, cordY=cy+ry*ay;
- const inset=.075;
- return{x:cordX-(ax/len)*inset,y:cordY-(ay/len)*inset};
+ // Put the charm's horizontal threading channel directly on the bracelet centerline.
+ // The bracelet image is rendered underneath, so the opaque charm body hides the
+ // middle section while the cord remains visible approaching/leaving both side holes.
+ return{x:cx+rx*Math.cos(t),y:cy+ry*Math.sin(t)};
 }
 function charmAngle(t){
- // Keep the charm's threading channel aligned radially with the bracelet cord.
- return t-Math.PI/2;
+ // Align the charm's left-right threading holes with the local tangent of the oval cord.
+ return Math.atan2(ry*Math.cos(t),-rx*Math.sin(t));
 }
 function render(){stage.querySelectorAll('.charm').forEach(n=>n.remove());charms.forEach(c=>{let im=document.createElement('img');im.className='charm'+(c.id===selected?' selected':'');im.src=products[c.product][1];im.alt=products[c.product][0];im.dataset.id=String(c.id);let p=point(c.t);im.style.left=(p.x*100)+'%';im.style.top=(p.y*100)+'%';im.style.transform=`translate(-50%,-50%) rotate(${charmAngle(c.t)}rad)`;im.addEventListener('pointerdown',e=>startDrag(e,c.id));im.addEventListener('click',e=>{e.stopPropagation();selected=c.id;render()});stage.appendChild(im)});document.getElementById('count').textContent='· '+charms.length+' charm'}
 function addCharm(i){saveState();let id=Date.now()+Math.random();let t= Math.PI/2 + (charms.length%7-3)*.18;charms.push({id,product:i,t});selected=id;render()}
