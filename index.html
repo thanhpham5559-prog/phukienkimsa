@@ -21,7 +21,7 @@ main{max-width:760px;margin:auto;padding:14px}.card{background:#fff;border:1px s
 <section class="card"><h2>1. Mẫu vòng</h2><div class="sub">Vòng dây hồng</div></section>
 <section class="card"><h2>2. Khu vực phối charm <span class="count" id="count">· 0 charm</span></h2>
 <div class="stage-wrap"><div class="stage" id="stage"><img class="bracelet" src="vong-day-hong.png" alt="Vòng dây hồng"><svg class="thread-layer" id="threadLayer" viewBox="0 0 1000 1000" aria-hidden="true"></svg></div></div>
-<p class="hint">Dây được căn theo lỗ xỏ phía sau, ở phần trên của charm. Charm được đặt lệch ra ngoài đường dây để cân đối như charm đang xỏ thật; mặt charm hướng ra ngoài và luôn đứng thẳng khi kéo quanh vòng 360°. Giữ charm và kéo dọc theo đường dây để đổi vị trí.</p>
+<p class="hint">Tâm lỗ xỏ phía sau charm được căn đúng vào đường dây vòng, không đẩy charm lệch ra ngoài; mặt charm hướng ra ngoài và luôn đứng thẳng khi kéo quanh vòng 360°. Giữ charm và kéo dọc theo đường dây để đổi vị trí.</p>
 <div class="tools"><button class="btn" id="undo">↶ Hoàn tác</button><button class="btn" id="remove">Xóa charm chọn</button><button class="btn" id="clear">Xóa tất cả</button><button class="btn primary" id="save">Lưu ảnh phối</button></div>
 </section>
 <section class="card"><h2>3. Kho charm của shop</h2><div class="inventory" id="inventory"></div></section>
@@ -38,7 +38,7 @@ const stage=document.getElementById('stage'),inventory=document.getElementById('
 let charms=[],selected=null,history=[],nextId=1;const cx=.5,cy=.5,rx=.405,ry=.285;
 products.forEach((p,i)=>{const d=document.createElement('div');d.className='item';d.innerHTML=`<img src="${p[1]}" alt="${p[0]}"><b>${p[0]}</b><button type="button">＋ Thêm vào vòng</button>`;d.querySelector('button').onclick=()=>addCharm(i);inventory.appendChild(d)});
 function saveState(){history.push(charms.map(c=>({...c})));if(history.length>30)history.shift()}
-function point(t,kind='main'){const x=Math.cos(t),y=Math.sin(t),nx=x/rx,ny=y/ry,len=Math.hypot(nx,ny)||1,offset=kind==='stopper'?0:.075;return{x:cx+rx*x+(nx/len)*offset,y:cy+ry*y+(ny/len)*offset}}
+function point(t,kind='main'){const x=Math.cos(t),y=Math.sin(t);const mainHolderHeight=window.matchMedia('(min-width:600px)').matches?.154:.175;const anchorShift=kind==='stopper'?0:(.5-.24)*mainHolderHeight;return{x:cx+rx*x,y:cy+ry*y+anchorShift}}
 function render(){stage.querySelectorAll('.charm-holder').forEach(n=>n.remove());charms.forEach(c=>{const holder=document.createElement('div');holder.className='charm-holder'+(products[c.product][2]==='stopper'?' stopper':'')+(c.id===selected?' selected':'');holder.dataset.id=String(c.id);const im=document.createElement('img');im.className='charm';im.src=products[c.product][1];im.alt=products[c.product][0];const cord=document.createElement('span');cord.className='cord-through';holder.appendChild(cord);holder.appendChild(im);const p=point(c.t,products[c.product][2]);holder.style.left=(p.x*100)+'%';holder.style.top=(p.y*100)+'%';holder.addEventListener('pointerdown',e=>startDrag(e,c.id));holder.addEventListener('click',e=>{e.stopPropagation();selected=c.id;render()});stage.appendChild(holder)});document.getElementById('count').textContent='· '+charms.length+' charm'}
 function addCharm(i){saveState();const t=Math.PI/2+(charms.length-((charms.length+1)/2))*0.62;const id=nextId++;charms.push({id,product:i,t});selected=id;render()}
 let drag=null,dragPointer=null;
